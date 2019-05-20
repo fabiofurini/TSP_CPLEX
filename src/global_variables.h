@@ -35,6 +35,8 @@ typedef struct data
 	int algo;
 	int option;
 
+	int cut_integer;
+	int cut_fractional;
 
 	int ** DISTANCE_MATRIX;
 	int n_cities;
@@ -42,15 +44,22 @@ typedef struct data
 	char *istname;
 
 	int status,ccnt,rcnt,nzcnt,lpstat,nodecount,cur_numrows,cur_numcols;
-	int* rmatbeg,*rmatind,*cmatbeg, *cmatind;
-	double *rmatval,*cmatval,*rngval,*x,*pi,*obj, *lb, *ub,*rhs,coef_p,objval,bestobjval;
+	int* rmatbeg,*rmatind,*cmatbeg, *cmatind,*indobj;
+	double *rmatval,*cmatval,*rngval,*x,*x_SEP,*pi,*obj, *lb, *ub,*rhs,coef_p,objval,objval_SEP,bestobjval,*valobj;
 	char *xctype,*sense;
 	char **rowname,**colname;
 
 	double cplex_lp;
 
-	CPXENVptr env;
-	CPXLPptr  lp;
+	CPXENVptr env,env_SEP;
+	CPXLPptr  lp,lp_SEP;
+
+	double cut_SEP_RHS;
+	int *cut_SEP_rmatind;
+	double *cut_SEP_rmatval;
+
+	int cut_1;
+	int cut_2;
 
 
 } data;

@@ -6,8 +6,243 @@
 #define print_solution_X
 //#define print_solution_U
 //#define write_lp
-
+//#define print_sol_callback
 //#define solve_lp
+
+#define EPSILON_TOLL 1e-4
+
+/*****************************************************************/
+int CPXPUBLIC mycutcallback_MODEL(CPXCENVptr env,void *cbdata,int wherefrom,void *cbhandle,int *useraction_p)
+/*****************************************************************/
+{
+
+	(*useraction_p)=CPX_CALLBACK_DEFAULT;
+
+	data *TSP_instance=(data *) cbhandle;
+
+	int num_variables=TSP_instance->n_cities*TSP_instance->n_cities+TSP_instance->n_cities;
+
+	TSP_instance->status=CPXgetcallbacknodex(env,cbdata,wherefrom,TSP_instance->x,0,num_variables-1);
+	if(TSP_instance->status!=0)
+	{
+		printf("cannot get the x\n");
+		exit(-1);
+	}
+
+#ifdef print_sol_callback
+	cout << "\n\nVARIABLES X\n";
+	for(int j=0; j<TSP_instance->n_cities; j++)
+	{
+		for(int k=0; k<TSP_instance->n_cities; k++)
+		{
+			printf("%.3f ",TSP_instance->x[position_x(TSP_instance,j,k)]);
+		}
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "\n\nVARIABLES U\n";
+	for(int j=0; j<TSP_instance->n_cities; j++)
+	{
+		cout << TSP_instance->x[position_u(TSP_instance,j)] << "\t";
+	}
+
+	TSP_instance->status=CPXgetcallbacknodeobjval(env,cbdata,wherefrom,&TSP_instance->objval);
+	if(TSP_instance->status!=0)
+	{
+		printf("error CPXgetcallbacknodeobjval\n");
+		exit(-1);
+	}
+	cout << endl;
+
+#endif
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	SEP_set_objective_function_cplex(TSP_instance);
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	TSP_instance->objval_SEP=SEP_solve_cplex(TSP_instance);
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	if(TSP_instance->objval_SEP < 1 - EPSILON_TOLL)
+	{
+
+		TSP_instance->nzcnt=0;
+		int size_subset=0;
+
+		for(int j=0; j<TSP_instance->n_cities; j++)
+		{
+			if(TSP_instance->x_SEP[position_w(TSP_instance,j)]>0.5)
+			{
+				size_subset++;
+			}
+		}
+
+//		cout << "\nFOUND A VIOLATED CUT (INTEGER SOL)\t" <<  TSP_instance->objval_SEP << "\tsubset of size\t" << size_subset << "\n";
+//		cin.get();
+
+		TSP_instance->cut_1++;
+
+		TSP_instance->cut_SEP_RHS=size_subset-1;
+
+		TSP_instance->nzcnt=0;
+
+		for(int j=0; j<TSP_instance->n_cities; j++)
+		{
+			for(int k=0; k<TSP_instance->n_cities; k++)
+			{
+				if(j==k){continue;}
+				if
+				(
+						TSP_instance->x_SEP[position_w(TSP_instance,j)] > 0.5
+						&&
+						TSP_instance->x_SEP[position_w(TSP_instance,k)] > 0.5
+				)
+				{
+					TSP_instance->cut_SEP_rmatind[TSP_instance->nzcnt]=position_x(TSP_instance,j,k);
+					TSP_instance->cut_SEP_rmatval[TSP_instance->nzcnt]=1.0;
+					TSP_instance->nzcnt++;
+				}
+			}
+		}
+
+		//TSP_instance->status=CPXcutcallbackaddlocal (env,cbdata,wherefrom,TSP_instance->nzcnt,TSP_instance->cut_SEP_RHS,'L',TSP_instance->cut_SEP_rmatind,TSP_instance->cut_SEP_rmatval);
+		TSP_instance->status=CPXcutcallbackadd (env,cbdata,wherefrom,TSP_instance->nzcnt,TSP_instance->cut_SEP_RHS,'L',TSP_instance->cut_SEP_rmatind,TSP_instance->cut_SEP_rmatval,0);
+		//TSP_instance->status=CPXcutcallbackadd (env,cbdata,wherefrom,TSP_instance->nzcnt,TSP_instance->cut_SEP_RHS,'L',TSP_instance->cut_SEP_rmatind,TSP_instance->cut_SEP_rmatval,1);
+
+		if(TSP_instance->status!=0)
+		{
+			printf("CPXcutcallbackadd\n");
+			exit(-1);
+		}
+
+		(*useraction_p)=CPX_CALLBACK_SET;
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+	return 0;
+}
+
+/*****************************************************************/
+int CPXPUBLIC myusercutcallback_MODEL(CPXCENVptr env,void *cbdata,int wherefrom,void *cbhandle,int *useraction_p)
+/*****************************************************************/
+{
+
+	(*useraction_p)=CPX_CALLBACK_DEFAULT;
+
+	data *TSP_instance=(data *) cbhandle;
+
+	int num_variables=TSP_instance->n_cities*TSP_instance->n_cities+TSP_instance->n_cities;
+
+	TSP_instance->status=CPXgetcallbacknodex(env,cbdata,wherefrom,TSP_instance->x,0,num_variables-1);
+	if(TSP_instance->status!=0)
+	{
+		printf("cannot get the x\n");
+		exit(-1);
+	}
+
+#ifdef print_sol_callback
+	cout << "\n\nVARIABLES X\n";
+	for(int j=0; j<TSP_instance->n_cities; j++)
+	{
+		for(int k=0; k<TSP_instance->n_cities; k++)
+		{
+			printf("%.3f ",TSP_instance->x[position_x(TSP_instance,j,k)]);
+		}
+		cout << endl;
+	}
+	cout << endl;
+
+	cout << "\n\nVARIABLES U\n";
+	for(int j=0; j<TSP_instance->n_cities; j++)
+	{
+		cout << TSP_instance->x[position_u(TSP_instance,j)] << "\t";
+	}
+
+	TSP_instance->status=CPXgetcallbacknodeobjval(env,cbdata,wherefrom,&TSP_instance->objval);
+	if(TSP_instance->status!=0)
+	{
+		printf("error CPXgetcallbacknodeobjval\n");
+		exit(-1);
+	}
+	cout << endl;
+
+#endif
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	SEP_set_objective_function_cplex(TSP_instance);
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	SEP_solve_cplex(TSP_instance);
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+	if(TSP_instance->objval_SEP < 1 - EPSILON_TOLL)
+	{
+
+		TSP_instance->nzcnt=0;
+		int size_subset=0;
+
+		for(int j=0; j<TSP_instance->n_cities; j++)
+		{
+			if(TSP_instance->x_SEP[position_w(TSP_instance,j)]>0.5)
+			{
+				size_subset++;
+			}
+		}
+
+//		cout << "\nFOUND A VIOLATED CUT (FRACT SOL)\t" <<  TSP_instance->objval_SEP << "\tsubset of size\t" << size_subset << "\n";
+//		cin.get();
+
+		TSP_instance->cut_2++;
+
+
+		TSP_instance->cut_SEP_RHS=size_subset-1;
+
+		TSP_instance->nzcnt=0;
+
+		for(int j=0; j<TSP_instance->n_cities; j++)
+		{
+			for(int k=0; k<TSP_instance->n_cities; k++)
+			{
+				if(j==k){continue;}
+				if
+				(
+						TSP_instance->x_SEP[position_w(TSP_instance,j)] >0.5
+						&&
+						TSP_instance->x_SEP[position_w(TSP_instance,k)]>0.5
+				)
+				{
+					TSP_instance->cut_SEP_rmatind[TSP_instance->nzcnt]=position_x(TSP_instance,j,k);
+					TSP_instance->cut_SEP_rmatval[TSP_instance->nzcnt]=1.0;
+					TSP_instance->nzcnt++;
+				}
+			}
+		}
+
+		//TSP_instance->status=CPXcutcallbackaddlocal (env,cbdata,wherefrom,TSP_instance->nzcnt,TSP_instance->cut_SEP_RHS,'L',TSP_instance->cut_SEP_rmatind,TSP_instance->cut_SEP_rmatval);
+		TSP_instance->status=CPXcutcallbackadd (env,cbdata,wherefrom,TSP_instance->nzcnt,TSP_instance->cut_SEP_RHS,'L',TSP_instance->cut_SEP_rmatind,TSP_instance->cut_SEP_rmatval,0);
+		//TSP_instance->status=CPXcutcallbackadd (env,cbdata,wherefrom,TSP_instance->nzcnt,TSP_instance->cut_SEP_RHS,'L',TSP_instance->cut_SEP_rmatind,TSP_instance->cut_SEP_rmatval,1);
+
+		if(TSP_instance->status!=0)
+		{
+			printf("CPXcutcallbackadd\n");
+			exit(-1);
+		}
+
+		(*useraction_p)=CPX_CALLBACK_SET;
+	}
+	//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+	return 0;
+}
 
 /*****************************************************************/
 int position_x(data *TSP_instance,int j,int k)
@@ -70,6 +305,9 @@ void MTZ_load_cplex(data *TSP_instance)
 			TSP_instance->obj[counter]=TSP_instance->DISTANCE_MATRIX[j][k];
 			TSP_instance->lb[counter]=0.0;
 			TSP_instance->ub[counter]=1.0;
+
+			if(j==k){TSP_instance->ub[counter]=0.0;}
+
 			TSP_instance->xctype[counter]='B';
 			//cout << "POSITION X\t" << position_x(TSP_instance,j,k) << endl;
 			sprintf(TSP_instance->colname[counter], "x%d.%d",j+1,k+1);
@@ -81,8 +319,11 @@ void MTZ_load_cplex(data *TSP_instance)
 	{
 
 		TSP_instance->obj[counter]=0.0;
+
 		TSP_instance->lb[counter]=1.0;
 		TSP_instance->ub[counter]=TSP_instance->n_cities-1;
+
+
 		TSP_instance->xctype[counter]='C';
 		//cout << "POSITION U\t" << position_u(TSP_instance,j) << endl;
 		sprintf(TSP_instance->colname[counter], "u%d",j+1);
@@ -423,11 +664,42 @@ int MTZ_solve_cplex(data *TSP_instance)
 		printf ("error for CPX_PARAM_EPRHS\n");
 	}
 
+	///////////////////////////////
+	SEP_load_cplex(TSP_instance);
+	///////////////////////////////
 
+	TSP_instance->x=(double*) calloc(TSP_instance->n_cities*TSP_instance->n_cities+TSP_instance->n_cities,sizeof(double));
 
 	///////////////////////////////////////////////////////////////////////////////////
 	// * solving the MIP model
 	clock_t time_start=clock();
+
+	if(TSP_instance->cut_integer==1 || TSP_instance->cut_fractional==1)
+	{
+		CPXsetintparam(TSP_instance->env, CPX_PARAM_MIPCBREDLP, CPX_OFF);// let MIP callbacks work on the original model
+		CPXsetintparam(TSP_instance->env, CPX_PARAM_PRELINEAR, CPX_OFF); // assure linear mappings between the presolved and original models
+		CPXsetintparam(TSP_instance->env, CPX_PARAM_REDUCE, CPX_PREREDUCE_PRIMALONLY);
+	}
+
+	if(TSP_instance->cut_integer==1 )
+	{
+		cout << "******INTEGER SEPARATION******\n\n";
+		TSP_instance->status = CPXsetlazyconstraintcallbackfunc(TSP_instance->env,mycutcallback_MODEL,TSP_instance);
+		if (TSP_instance->status)
+		{
+			printf ("error for CPXsetlazyconstraintcallbackfunc\n");
+		}
+	}
+
+	if(TSP_instance->cut_fractional==1)
+	{
+		cout << "******FRACTIONAL SEPARATION******\n\n";
+		TSP_instance->status = CPXsetusercutcallbackfunc(TSP_instance->env,myusercutcallback_MODEL,TSP_instance);
+		if (TSP_instance->status)
+		{
+			printf ("error for CPXsetuserconstraintcallbackfunc\n");
+		}
+	}
 
 
 	TSP_instance->status=CPXmipopt(TSP_instance->env,TSP_instance->lp);
@@ -439,13 +711,11 @@ int MTZ_solve_cplex(data *TSP_instance)
 
 	clock_t time_end=clock();
 	double solution_time=(double)(time_end-time_start)/(double)CLOCKS_PER_SEC;
+
 	///////////////////////////////////////////////////////////////////////////////////
 
 
 	// * getting the solution
-
-	TSP_instance->x=(double*) calloc(TSP_instance->n_cities*TSP_instance->n_cities+TSP_instance->n_cities,sizeof(double));
-
 
 	TSP_instance->status=CPXgetmipx(TSP_instance->env,TSP_instance->lp,TSP_instance->x,0,TSP_instance->n_cities*TSP_instance->n_cities+TSP_instance->n_cities-1);
 	if(TSP_instance->status!=0)
@@ -453,6 +723,9 @@ int MTZ_solve_cplex(data *TSP_instance)
 		printf("error in CPXgetmipx\n");
 		exit(-1);
 	}
+
+
+
 
 #ifdef print_solution_X
 	cout << "\n\nVARIABLES X\n";
@@ -482,6 +755,7 @@ int MTZ_solve_cplex(data *TSP_instance)
 	}
 
 	printf("\n\nMIP solution value ->\t\%f",TSP_instance->objval);
+	printf("\n\nMIP solution time ->\t\%f",solution_time);
 
 
 	TSP_instance->status=CPXgetbestobjval(TSP_instance->env,TSP_instance->lp,&(TSP_instance->bestobjval));
@@ -494,6 +768,8 @@ int MTZ_solve_cplex(data *TSP_instance)
 	TSP_instance->lpstat=CPXgetstat(TSP_instance->env,TSP_instance->lp);
 	TSP_instance->nodecount = CPXgetnodecnt(TSP_instance->env, TSP_instance->lp);
 
+	cout << "\n\ncut_1\t" << TSP_instance->cut_1 << endl;
+	cout << "cut_2\t" << TSP_instance->cut_2 << endl;
 
 
 	///////////////////////////////////////////////////////////////////////////////////
@@ -526,6 +802,7 @@ int MTZ_solve_cplex(data *TSP_instance)
 	compact_file.close();
 
 
+
 	/////////////////////////////////////////////////////////////////////////////////
 #ifdef solve_lp
 	MTZ_solve_LP(TSP_instance);
@@ -533,6 +810,11 @@ int MTZ_solve_cplex(data *TSP_instance)
 	/////////////////////////////////////////////////////////////////////////////////
 
 	free(TSP_instance->x);
+
+	///////////////////////////////7
+	SEP_free_cplex(TSP_instance);
+	///////////////////////////////7
+
 
 	return TSP_instance->objval;
 

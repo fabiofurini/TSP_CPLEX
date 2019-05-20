@@ -21,7 +21,7 @@ int main(int argc, char** argv)
 
 
 	TSP_instance.istname=new char[2000];
-	if (argc == 6)
+	if (argc == 8)
 	{
 
 		TSP_instance.algo=atoi(argv[1]);
@@ -30,6 +30,10 @@ int main(int argc, char** argv)
 		strcpy(TSP_instance.istname, argv[3]);
 		TSP_instance.timeLimit=atof(argv[4]);
 		TSP_instance.n_input=atoi(argv[5]);
+
+		TSP_instance.cut_integer=atoi(argv[6]);
+		TSP_instance.cut_fractional=atoi(argv[7]);
+
 	}
 	else
 	{

@@ -4,6 +4,7 @@
 
 #include "global_variables.h"
 #include "global_functions.h"
+#include "SEP.h"
 
 
 using namespace std;
